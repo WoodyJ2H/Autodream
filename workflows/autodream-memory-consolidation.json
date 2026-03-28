@@ -1,0 +1,230 @@
+{
+  "name": "Autodream - Memory Consolidation",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 🧠 AUTODREAM — AI Memory Consolidation\n\nThis workflow automatically consolidates Claude Code memory files every night.\n\n**How it works:**\n1. Lists `.md` files in a Google Drive folder\n2. For each file, calls Claude to consolidate/improve the content\n3. Rewrites modified files back to Drive\n4. Sends a summary email report\n\n**Requirements:**\n- A dedicated Google Drive folder for memory files\n- Credentials: Google Drive OAuth2, Anthropic API, Gmail OAuth2\n- The **Autodream - Process One File** workflow installed and active",
+        "height": 384,
+        "width": 500,
+        "color": 3
+      },
+      "id": "sticky-title",
+      "name": "Sticky Note Title",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-208, -272]
+    },
+    {
+      "parameters": {
+        "content": "## ⚙️ SETUP REQUIRED\n\n**Step 1 — Create n8n credentials:**\n- Google Drive OAuth2 API\n- Anthropic API (key from console.anthropic.com)\n- Gmail OAuth2\n\n**Step 2 — Configure the List Memory Files node:**\n- Replace `YOUR_GOOGLE_DRIVE_FOLDER_ID` with your Drive folder ID\n- (The ID is in the folder URL: drive.google.com/drive/folders/**YOUR_ID**)\n\n**Step 3 — Configure Send Summary Email:**\n- Replace `YOUR_EMAIL@gmail.com` with your address\n\n**Step 4 — Install the sub-workflow:**\n- Import and activate **Autodream - Process One File**\n- Copy its ID and paste it into the **Process One File** node\n\n**Step 5 — Activate this workflow**",
+        "height": 444,
+        "width": 500,
+        "color": 5
+      },
+      "id": "sticky-setup",
+      "name": "Sticky Note Setup",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-208, 160]
+    },
+    {
+      "parameters": {
+        "content": "## ⏰ TRIGGERS\nSchedule: every night at 3am\nCron: `0 0 3 * * *`\n\nOr run manually via\n'Execute workflow'",
+        "height": 224,
+        "width": 280,
+        "color": 6
+      },
+      "id": "sticky-schedule",
+      "name": "Sticky Note Schedule",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [352, -272]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 0 3 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [368, 0]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "When clicking 'Execute workflow'",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [368, 160]
+    },
+    {
+      "parameters": {
+        "content": "## 📂 STEP 1 — List files\nReplace `YOUR_GOOGLE_DRIVE_FOLDER_ID`\nwith your Drive folder ID",
+        "height": 216,
+        "width": 300,
+        "color": 4
+      },
+      "id": "sticky-main",
+      "name": "Sticky Note Main",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [640, -272]
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/drive/v3/files?q='YOUR_GOOGLE_DRIVE_FOLDER_ID'+in+parents+and+trashed%3Dfalse&fields=files(id%2Cname%2CmimeType)&pageSize=50",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "options": {}
+      },
+      "id": "list-memory-files",
+      "name": "List Memory Files",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [672, 64]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filter out MEMORY.md (too large) and prepare items\nconst files = $input.first().json.files.filter(f => f.name !== 'MEMORY.md');\nreturn files.map(f => ({ json: { fileId: f.id, fileName: f.name } }));"
+      },
+      "id": "prepare-files",
+      "name": "Prepare Files",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 64]
+    },
+    {
+      "parameters": {
+        "content": "## 🔄 STEP 2 — Process each file\nReplace the workflow ID with the ID\nof **Autodream - Process One File**\n\nMode: **Run once for each item**\nWait for completion: **ON**",
+        "height": 224,
+        "width": 320,
+        "color": 2
+      },
+      "id": "sticky-subprocess",
+      "name": "Sticky Note Subprocess",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1088, -272]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "YOUR_SUBWORKFLOW_ID",
+          "mode": "id"
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "process-file",
+      "name": "Process One File",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [1120, 64]
+    },
+    {
+      "parameters": {
+        "content": "## 📧 STEP 3 — Summary email\nReplace `YOUR_EMAIL@gmail.com`\nwith your email address",
+        "height": 232,
+        "width": 280,
+        "color": 7
+      },
+      "id": "sticky-email",
+      "name": "Sticky Note Email",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1440, -272]
+    },
+    {
+      "parameters": {
+        "jsCode": "const allResults = $input.all().map(item => item.json);\nconst today = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });\nconst changedCount = allResults.filter(r => r.changed).length;\n\nconst detailsHtml = allResults.map(r => {\n  const changesHtml = (r.changes && r.changes !== 'No changes')\n    ? `<p><b>Changes:</b></p><ul>${r.changes.split('\\n').filter(Boolean).map(l => `<li>${l.replace(/^[-\\u2022\\s]+/, '')}</li>`).join('')}</ul>`\n    : `<p><i>No changes</i></p>`;\n  const obsHtml = r.observation ? `<p><b>Observation:</b> ${r.observation}</p>` : '';\n  const badge = r.changed ? ' <span style=\"color:green\">[updated]</span>' : '';\n  return `<h3>${r.fileName}${badge}</h3>${changesHtml}${obsHtml}`;\n}).join('<hr>');\n\nconst subject = changedCount > 0\n  ? `🧠 Autodream - ${changedCount} file(s) updated - ${today}`\n  : `🧠 Autodream - Memory report - ${today}`;\n\nconst body = `<h2>Autodream — Memory Consolidation Report</h2><p><b>Date:</b> ${today}</p><p>${changedCount > 0 ? changedCount + ' file(s) updated' : 'No changes needed'}</p><h3>File details</h3>${detailsHtml}`;\n\nreturn [{ json: { subject, body } }];"
+      },
+      "id": "build-email",
+      "name": "Build Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1392, 64]
+    },
+    {
+      "parameters": {
+        "sendTo": "YOUR_EMAIL@gmail.com",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.body }}",
+        "options": {}
+      },
+      "id": "send-email",
+      "name": "Send Summary Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1600, 64]
+    },
+    {
+      "parameters": {
+        "content": "## 🚨 ERROR HANDLING\nIf the workflow fails, an alert email\nis sent automatically.\nReplace `YOUR_EMAIL@gmail.com` here too.",
+        "height": 120,
+        "width": 400
+      },
+      "id": "sticky-error",
+      "name": "Sticky Note Error",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [928, 368]
+    },
+    {
+      "parameters": {},
+      "id": "error-trigger",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [1376, 416]
+    },
+    {
+      "parameters": {
+        "sendTo": "YOUR_EMAIL@gmail.com",
+        "subject": "🚨 Autodream - Memory consolidation error",
+        "message": "=<h2>Autodream Error</h2><p>Node: {{ $json.execution.lastNodeExecuted }}</p><p>Error: {{ $json.execution.error.message }}</p>",
+        "options": {}
+      },
+      "id": "send-error-email",
+      "name": "Send Error Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1616, 416]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [[{"node": "List Memory Files", "type": "main", "index": 0}]]
+    },
+    "When clicking 'Execute workflow'": {
+      "main": [[{"node": "List Memory Files", "type": "main", "index": 0}]]
+    },
+    "List Memory Files": {
+      "main": [[{"node": "Prepare Files", "type": "main", "index": 0}]]
+    },
+    "Prepare Files": {
+      "main": [[{"node": "Process One File", "type": "main", "index": 0}]]
+    },
+    "Process One File": {
+      "main": [[{"node": "Build Email", "type": "main", "index": 0}]]
+    },
+    "Build Email": {
+      "main": [[{"node": "Send Summary Email", "type": "main", "index": 0}]]
+    },
+    "Error Trigger": {
+      "main": [[{"node": "Send Error Email", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
