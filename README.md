@@ -1,120 +1,121 @@
-# 🧠 Autodream — AI Memory Consolidation for Claude Code
+# Autodream — Memory Consolidation for Claude Code
 
-An n8n workflow that automatically consolidates your [Claude Code memory files](https://docs.anthropic.com/en/docs/claude-code/memory) every night using Claude AI.
+> AI-powered nightly consolidation of your Claude Code memory files via n8n + Google Drive + Claude API
+
+---
 
 ## What it does
 
 Every night at 3am, Autodream:
-1. Scans a Google Drive folder containing your `.md` memory files
-2. Sends each file to Claude (Sonnet) for consolidation — removing redundancies, fixing contradictions, improving clarity
-3. Rewrites only the files that actually changed
-4. Sends you an email report summarizing what was updated
+1. Lists all `.md` memory files in your Google Drive "Claude Memory" folder
+2. Sends each file to Claude Sonnet for consolidation (removes redundancy, fixes contradictions, improves clarity)
+3. Rewrites the file on Drive **only if changes were made**
+4. Sends you an email summary (modified / unchanged files)
 
-## Why
+---
 
-Claude Code has a persistent memory system stored as markdown files. Over time, these files accumulate redundant or contradictory information. Autodream keeps them clean automatically so Claude always has accurate, up-to-date context.
+## Architecture
 
-## Workflows
+```
+[Schedule 3am] → [List Drive files] → [Process One File x N]
+  → [Read file from Drive]
+  → [Claude Sonnet consolidation]
+  → [Write back to Drive if changed]
+→ [Email summary]
+[Error Trigger] → [Error email]
+```
 
-| File | Description |
-|------|-------------|
-| `autodream-memory-consolidation.json` | Main workflow — scheduler, file listing, email report |
-| `autodream-process-one-file.json` | Sub-workflow — reads, calls Claude, writes back |
+**Two workflows:**
+- `autodream-memory-consolidation.json` — Main orchestrator
+- `autodream-process-one-file.json` — Sub-workflow (called once per file)
 
-## Prerequisites
+---
+
+## Requirements
 
 - n8n instance (self-hosted or cloud)
-- Google Drive folder with your `.md` memory files
-- Anthropic API key ([console.anthropic.com](https://console.anthropic.com))
-- Gmail account
+- Google Drive OAuth2 credential
+- Anthropic API credential
+- Gmail OAuth2 credential
+- A Google Drive folder containing your Claude Code memory `.md` files
+
+---
 
 ## Setup
 
-### Step 1 — Import workflows
+### 1. Import the workflows
 
-Import both JSON files into n8n in this order:
-1. `autodream-process-one-file.json` first
-2. `autodream-memory-consolidation.json` second
+Import both JSON files into your n8n instance in this order:
+1. `autodream-process-one-file.json` (sub-workflow — import first to get its ID)
+2. `autodream-memory-consolidation.json` (main workflow)
 
-### Step 2 — Create credentials in n8n
+### 2. Configure the main workflow
 
-- **Google Drive OAuth2 API** — connect your Google account
-- **Anthropic API** — paste your API key
-- **Gmail OAuth2** — connect your Gmail account
+In `autodream-memory-consolidation.json`, update:
 
-### Step 3 — Configure the main workflow
+| Node | Field | Value |
+|---|---|---|
+| List Memory Files | URL | Replace `YOUR_GOOGLE_DRIVE_FOLDER_ID` with your Drive folder ID |
+| Process One File | Workflow ID | Replace `YOUR_SUBWORKFLOW_ID` with the ID of the imported sub-workflow |
+| Send Summary Email | Send To | Replace `YOUR_EMAIL@gmail.com` with your email |
+| Send Error Email | Send To | Replace `YOUR_EMAIL@gmail.com` with your email |
 
-Open `Autodream - Memory Consolidation` and:
+### 3. Set credentials
 
-1. **List Memory Files node** — replace `YOUR_GOOGLE_DRIVE_FOLDER_ID` with your folder ID
-   > Find it in the URL: `drive.google.com/drive/folders/YOUR_ID_HERE`
+On every HTTP Request node that calls Google Drive or Gmail, select your OAuth2 credentials.
+On the Call Claude node, select your Anthropic API credential.
 
-2. **Process One File node** — replace `YOUR_SUBWORKFLOW_ID` with the ID of the sub-workflow
-   > Find it in the URL when you open the sub-workflow: `your-n8n.com/workflow/THIS_ID`
+### 4. Activate
 
-3. **Send Summary Email & Send Error Email nodes** — replace `YOUR_EMAIL@gmail.com`
+Activate the sub-workflow first, then the main workflow.
 
-### Step 4 — Assign credentials
-
-In both workflows, open each HTTP Request node and assign the correct credential.
-
-### Step 5 — Activate
-
-1. Activate `Autodream - Process One File` first
-2. Then activate `Autodream - Memory Consolidation`
-
-## Memory file format
-
-Autodream works with any `.md` file. It preserves YAML frontmatter if present:
-
-```markdown
----
-name: My memory file
-description: What this file contains
-type: user
 ---
 
-Content of the memory file...
+## Bug fix — v1.1 (2026-04-26)
+
+**Critical fix:** The `Write File` node in the sub-workflow had `specifyBody: raw` configured but **no body field set**. This caused Drive to receive an empty body, silently overwriting consolidated files with blank content.
+
+Fixed: `body` is now correctly set to `={{ $json.newContent }}` (the consolidated content returned by Claude).
+
+If you imported a previous version, open the sub-workflow, find the **Write File** node, and set the body field to `={{ $json.newContent }}`.
+
+---
+
+## Sync back to local (recommended)
+
+Autodream writes consolidated files to Drive, but Claude Code reads from your local `~/.claude/projects/.../memory/` directory. To close the loop, sync Drive back to local at each session start.
+
+Create a PowerShell script and a `SessionStart` hook in `~/.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "SessionStart": [{
+      "hooks": [{
+        "type": "command",
+        "command": "pwsh -NonInteractive -ExecutionPolicy Bypass -File \"path/to/sync-memory-from-drive.ps1\"",
+        "timeout": 30,
+        "statusMessage": "Syncing memory from Drive..."
+      }]
+    }]
+  }
+}
 ```
 
-> **Note:** Files named `MEMORY.md` are automatically excluded (used as an index file).
+---
 
-## Customization
+## Schedule
 
-### Change the schedule
+Default: `0 0 3 * * *` (3am daily). Modify the Schedule Trigger node to change the frequency.
 
-Edit the cron expression in the **Schedule Trigger** node:
-- `0 0 3 * * *` → every night at 3am (default)
-- `0 0 6 * * 1` → every Monday at 6am
+---
 
-### Change the Claude model
+## Error handling
 
-Edit the `model` field in the **Call Claude** node JSON body:
-- `claude-sonnet-4-6` (default — good balance)
-- `claude-haiku-4-5-20251001` (faster, cheaper)
-- `claude-opus-4-6` (more thorough, more expensive)
+Both workflows have an Error Trigger node that sends an email alert on failure. Configure the `errorWorkflow` setting in n8n to point to a dedicated error handler if needed.
 
-### Exclude more files
-
-Edit the **Prepare Files** node code:
-```javascript
-const files = $input.first().json.files.filter(
-  f => f.name !== 'MEMORY.md' && f.name !== 'another-file.md'
-);
-```
-
-## Email report example
-
-Subject: `🧠 Autodream - 3 file(s) updated - 28/03/2026`
-
-The email lists each file with:
-- What was changed (bullet points)
-- A brief observation from Claude
+---
 
 ## License
 
 MIT
-
----
-
-Built with [n8n](https://n8n.io) + [Claude](https://anthropic.com) by [@WoodyJ2H](https://github.com/WoodyJ2H)
