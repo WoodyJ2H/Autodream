@@ -3,45 +3,6 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## 🧠 AUTODREAM — AI Memory Consolidation\n\nThis workflow automatically consolidates Claude Code memory files every night.\n\n**How it works:**\n1. Lists `.md` files in a Google Drive folder\n2. For each file, calls Claude to consolidate/improve the content\n3. Rewrites modified files back to Drive\n4. Sends a summary email report\n\n**Requirements:**\n- A dedicated Google Drive folder for memory files\n- Credentials: Google Drive OAuth2, Anthropic API, Gmail OAuth2\n- The **Autodream - Process One File** workflow installed and active",
-        "height": 384,
-        "width": 500,
-        "color": 3
-      },
-      "id": "sticky-title",
-      "name": "Sticky Note Title",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [-208, -272]
-    },
-    {
-      "parameters": {
-        "content": "## ⚙️ SETUP REQUIRED\n\n**Step 1 — Create n8n credentials:**\n- Google Drive OAuth2 API\n- Anthropic API (key from console.anthropic.com)\n- Gmail OAuth2\n\n**Step 2 — Configure the List Memory Files node:**\n- Replace `YOUR_GOOGLE_DRIVE_FOLDER_ID` with your Drive folder ID\n- (The ID is in the folder URL: drive.google.com/drive/folders/**YOUR_ID**)\n\n**Step 3 — Configure Send Summary Email:**\n- Replace `YOUR_EMAIL@gmail.com` with your address\n\n**Step 4 — Install the sub-workflow:**\n- Import and activate **Autodream - Process One File**\n- Copy its ID and paste it into the **Process One File** node\n\n**Step 5 — Activate this workflow**",
-        "height": 444,
-        "width": 500,
-        "color": 5
-      },
-      "id": "sticky-setup",
-      "name": "Sticky Note Setup",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [-208, 160]
-    },
-    {
-      "parameters": {
-        "content": "## ⏰ TRIGGERS\nSchedule: every night at 3am\nCron: `0 0 3 * * *`\n\nOr run manually via\n'Execute workflow'",
-        "height": 224,
-        "width": 280,
-        "color": 6
-      },
-      "id": "sticky-schedule",
-      "name": "Sticky Note Schedule",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [352, -272]
-    },
-    {
-      "parameters": {
         "rule": {
           "interval": [
             {
@@ -55,7 +16,10 @@
       "name": "Schedule Trigger",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [368, 0]
+      "position": [
+        -400,
+        16
+      ]
     },
     {
       "parameters": {},
@@ -63,24 +27,14 @@
       "name": "When clicking 'Execute workflow'",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
-      "position": [368, 160]
+      "position": [
+        -400,
+        240
+      ]
     },
     {
       "parameters": {
-        "content": "## 📂 STEP 1 — List files\nReplace `YOUR_GOOGLE_DRIVE_FOLDER_ID`\nwith your Drive folder ID",
-        "height": 216,
-        "width": 300,
-        "color": 4
-      },
-      "id": "sticky-main",
-      "name": "Sticky Note Main",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [640, -272]
-    },
-    {
-      "parameters": {
-        "url": "=https://www.googleapis.com/drive/v3/files?q='YOUR_GOOGLE_DRIVE_FOLDER_ID'+in+parents+and+trashed%3Dfalse&fields=files(id%2Cname%2CmimeType)&pageSize=50",
+        "url": "=https://www.googleapis.com/drive/v3/files?q='YOUR_DRIVE_FOLDER_ID'+in+parents+and+trashed%3Dfalse&fields=files(id%2Cname%2CmimeType)&pageSize=50",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "googleDriveOAuth2Api",
         "options": {}
@@ -89,38 +43,38 @@
       "name": "List Memory Files",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [672, 64]
+      "position": [
+        -160,
+        240
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "YOUR_GOOGLE_DRIVE_CREDENTIAL_ID",
+          "name": "Google Drive account"
+        }
+      }
     },
     {
       "parameters": {
-        "jsCode": "// Filter out MEMORY.md (too large) and prepare items\nconst files = $input.first().json.files.filter(f => f.name !== 'MEMORY.md');\nreturn files.map(f => ({ json: { fileId: f.id, fileName: f.name } }));"
+        "jsCode": "const files = $input.first().json.files.filter(f => f.name !== 'MEMORY.md');\nreturn files.map(f => ({ json: { fileId: f.id, fileName: f.name } }));"
       },
       "id": "prepare-files",
       "name": "Prepare Files",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [880, 64]
-    },
-    {
-      "parameters": {
-        "content": "## 🔄 STEP 2 — Process each file\nReplace the workflow ID with the ID\nof **Autodream - Process One File**\n\nMode: **Run once for each item**\nWait for completion: **ON**",
-        "height": 224,
-        "width": 320,
-        "color": 2
-      },
-      "id": "sticky-subprocess",
-      "name": "Sticky Note Subprocess",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [1088, -272]
+      "position": [
+        64,
+        128
+      ]
     },
     {
       "parameters": {
         "workflowId": {
           "__rl": true,
-          "value": "YOUR_SUBWORKFLOW_ID",
+          "value": "YOUR_SUB_WORKFLOW_ID",
           "mode": "id"
         },
+        "mode": "each",
         "options": {
           "waitForSubWorkflow": true
         }
@@ -129,30 +83,23 @@
       "name": "Process One File",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
-      "position": [1120, 64]
+      "position": [
+        288,
+        128
+      ]
     },
     {
       "parameters": {
-        "content": "## 📧 STEP 3 — Summary email\nReplace `YOUR_EMAIL@gmail.com`\nwith your email address",
-        "height": 232,
-        "width": 280,
-        "color": 7
-      },
-      "id": "sticky-email",
-      "name": "Sticky Note Email",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [1440, -272]
-    },
-    {
-      "parameters": {
-        "jsCode": "const allResults = $input.all().map(item => item.json);\nconst today = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });\nconst changedCount = allResults.filter(r => r.changed).length;\n\nconst detailsHtml = allResults.map(r => {\n  const changesHtml = (r.changes && r.changes !== 'No changes')\n    ? `<p><b>Changes:</b></p><ul>${r.changes.split('\\n').filter(Boolean).map(l => `<li>${l.replace(/^[-\\u2022\\s]+/, '')}</li>`).join('')}</ul>`\n    : `<p><i>No changes</i></p>`;\n  const obsHtml = r.observation ? `<p><b>Observation:</b> ${r.observation}</p>` : '';\n  const badge = r.changed ? ' <span style=\"color:green\">[updated]</span>' : '';\n  return `<h3>${r.fileName}${badge}</h3>${changesHtml}${obsHtml}`;\n}).join('<hr>');\n\nconst subject = changedCount > 0\n  ? `🧠 Autodream - ${changedCount} file(s) updated - ${today}`\n  : `🧠 Autodream - Memory report - ${today}`;\n\nconst body = `<h2>Autodream — Memory Consolidation Report</h2><p><b>Date:</b> ${today}</p><p>${changedCount > 0 ? changedCount + ' file(s) updated' : 'No changes needed'}</p><h3>File details</h3>${detailsHtml}`;\n\nreturn [{ json: { subject, body } }];"
+        "jsCode": "const allResults = $input.all().map(item => item.json);\nconst today = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });\nconst changedCount = allResults.filter(r => r.changed).length;\n\nconst detailsHtml = allResults.map(r => {\n  const changesHtml = (r.changes && r.changes !== 'Aucune modification')\n    ? `<p><b>Modifications :</b></p><ul>${r.changes.split('\\n').filter(Boolean).map(l => `<li>${l.replace(/^[-\\u2022\\s]+/, '')}</li>`).join('')}</ul>`\n    : `<p><i>Aucune modification</i></p>`;\n  const obsHtml = r.observation ? `<p><b>Observation :</b> ${r.observation}</p>` : '';\n  const badge = r.changed ? ' <span style=\"color:green\">[modifié]</span>' : '';\n  return `<h3>${r.fileName}${badge}</h3>${changesHtml}${obsHtml}`;\n}).join('<hr>');\n\nconst subject = changedCount > 0\n  ? `🧠 Autodream - ${changedCount} fichier(s) mis à jour - ${today}`\n  : `🧠 Autodream - Rapport mémoire - ${today}`;\n\nconst body = `<h2>Autodream — Rapport de consolidation mémoire</h2><p><b>Date :</b> ${today}</p><p>${changedCount > 0 ? changedCount + ' fichier(s) modifié(s)' : 'Aucune modification nécessaire'}</p><h3>Détail par fichier</h3>${detailsHtml}`;\n\nreturn [{ json: { subject, body } }];"
       },
       "id": "build-email",
       "name": "Build Email",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1392, 64]
+      "position": [
+        1632,
+        128
+      ]
     },
     {
       "parameters": {
@@ -165,19 +112,17 @@
       "name": "Send Summary Email",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
-      "position": [1600, 64]
-    },
-    {
-      "parameters": {
-        "content": "## 🚨 ERROR HANDLING\nIf the workflow fails, an alert email\nis sent automatically.\nReplace `YOUR_EMAIL@gmail.com` here too.",
-        "height": 120,
-        "width": 400
-      },
-      "id": "sticky-error",
-      "name": "Sticky Note Error",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [928, 368]
+      "position": [
+        1856,
+        128
+      ],
+      "webhookId": "4f6e5cc9-aa3a-4da0-a783-fcab2fe6d6ba",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
     },
     {
       "parameters": {},
@@ -185,46 +130,414 @@
       "name": "Error Trigger",
       "type": "n8n-nodes-base.errorTrigger",
       "typeVersion": 1,
-      "position": [1376, 416]
+      "position": [
+        -400,
+        416
+      ]
     },
     {
       "parameters": {
         "sendTo": "YOUR_EMAIL@gmail.com",
-        "subject": "🚨 Autodream - Memory consolidation error",
-        "message": "=<h2>Autodream Error</h2><p>Node: {{ $json.execution.lastNodeExecuted }}</p><p>Error: {{ $json.execution.error.message }}</p>",
+        "subject": "Autodream - Erreur dans la consolidation memoire",
+        "message": "=<h2>Erreur Autodream</h2><p>Node : {{ $json.execution.lastNodeExecuted }}</p><p>Erreur : {{ $json.execution.error.message }}</p>",
         "options": {}
       },
       "id": "send-error-email",
       "name": "Send Error Email",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
-      "position": [1616, 416]
+      "position": [
+        -160,
+        416
+      ],
+      "webhookId": "cd5ec0dc-53df-4c39-82ed-8ae49f5812be",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Autodream — Memory Consolidation + Index Rebuild\n\n**Role:** Consolide chaque nuit les fichiers memoire Drive via Claude, puis reconstruit MEMORY.md (index).\n\n**Declencheurs:** Schedule quotidien 01h00 UTC · Webhook GET (YOUR_WEBHOOK_PATH) · Manuel\n\n**Inputs:** Dossier Google Drive `YOUR_DRIVE_FOLDER_ID` — fichiers .md\n\n**Outputs:**\n- Fichiers .md consolides sur Drive (via sub-workflow YOUR_SUB_WORKFLOW_ID)\n- MEMORY.md rebuilt par Claude (Feature A — 2026-04-26)\n- Email de synthese\n\n**Pipeline:**\nList Files → Prepare Files (exclut MEMORY.md) → Process One File (sub x44)\n→ Read All Files for Index → Build MEMORY Index → Call Claude for Index\n→ Parse Index → Memory Index Prep → Index to Binary → Drive Write Index\n→ Build Email → Send Summary Email\n\n**Sub-workflow:** YOUR_SUB_WORKFLOW_ID — lit/consolide/ecrit chaque fichier .md\n**Error workflow:** oksf4mbuurLbDqsN\n\n**Notes techniques:**\n- specifyBody raw CASSE en n8n 2.15 pour PATCH → convertToFile toBinary + Drive Update node\n- Cache Code nodes : renommer le node pour forcer nouveau cache",
+        "height": 448,
+        "width": 620,
+        "color": 6
+      },
+      "id": "sticky-main-autodream-consolidation",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -528,
+        -656
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Echelle d'estimation — Temps d'execution\n\nCalibre le 2026-04-26 — 44 fichiers en ~2min20s (~3.2s/fichier)\nInclut maintenant MEMORY.md rebuild (+25s Anthropic API)\n\nItems      Temps          Cafe ?\n─────────────────────────────────────\n10         ~55s           Non\n20         ~1 min 30s     Non\n30         ~2 min         Non\n44         ~2 min 20s     Non (run nominal)\n50         ~2 min 45s     Non",
+        "height": 296,
+        "width": 736,
+        "color": 2
+      },
+      "id": "sticky-echelle-autodream-consolidation",
+      "name": "Sticky Note Echelle",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        112,
+        -656
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/drive/v3/files?q='YOUR_DRIVE_FOLDER_ID'+in+parents+and+trashed%3Dfalse&fields=files(id%2Cname%2CmimeType)&pageSize=50",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "options": {}
+      },
+      "id": "5b485b88-1e1a-44c5-9a60-f5fc0e0f6d09",
+      "name": "Read All Files for Index",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        512,
+        256
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "YOUR_GOOGLE_DRIVE_CREDENTIAL_ID",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst driveFiles = $input.first().json.files || [];\n\n// Trouver l'ID de MEMORY.md\nconst memoryMdFile = driveFiles.find(f => f.name === 'MEMORY.md');\nconst memoryMdId = memoryMdFile ? String(memoryMdFile.id) : '';\n\n// Liste des fichiers .md hors MEMORY.md\nconst mdFiles = driveFiles\n  .filter(f => f.name !== 'MEMORY.md' && f.name.endsWith('.md'))\n  .map(f => String(f.name))\n  .sort();\n\nconst sys = [\n  'You are rebuilding the MEMORY.md index file for Claude Code.',\n  'MEMORY.md is a master index of all memory files. Each line points to one file.',\n  '',\n  'Format strictly:',\n  '# Memory Index',\n  '',\n  '- [Title](filename.md) -- one-line description under 120 chars',\n  '',\n  'Rules:',\n  '- Max 200 lines total',\n  '- One entry per file, sorted alphabetically',\n  '- Description must be specific and actionable, not generic',\n  '- Infer the description from the filename (feedback_ = a rule/lesson, project_ = a project state, reference_ = a pointer, user_ = user profile)',\n  '- No section headers, no categories, just a flat list',\n  '- Output raw markdown ONLY, no backticks, no explanation'\n].join('\\n');\n\nconst userMsg = 'Here are all the current memory files:\\n\\n' + mdFiles.join('\\n') + '\\n\\nRebuild MEMORY.md as a lean, accurate index.';\n\nconst claudeBody = JSON.stringify({\n  model: 'claude-sonnet-4-6',\n  max_tokens: 2048,\n  system: sys,\n  messages: [{ role: 'user', content: userMsg }]\n});\n\nreturn [{ json: { claudeBody: claudeBody, memoryMdId: memoryMdId } }];\n"
+      },
+      "id": "59937764-43b2-4642-8bb2-120b28dbd525",
+      "name": "Build MEMORY Index",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        736,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.claudeBody }}",
+        "options": {}
+      },
+      "id": "4ff2089b-efa9-4b11-b982-5597e57192b9",
+      "name": "Call Claude for Index",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        928,
+        240
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "YOUR_ANTHROPIC_CREDENTIAL_ID",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst raw = $input.first().json.content[0].text;\nconst memoryMdId = $('Build MEMORY Index').first().json.memoryMdId;\n\nconst cleaned = raw\n  .replace(/^```markdown\\s*/i, '')\n  .replace(/^```\\s*/i, '')\n  .replace(/```\\s*$/i, '')\n  .trim();\n\nreturn [{ json: { newMemoryContent: cleaned, memoryMdId: String(memoryMdId || '') } }];\n"
+      },
+      "id": "ce649d94-80d7-4a3d-8ef3-989511e7caa1",
+      "name": "Parse Index",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "path": "YOUR_WEBHOOK_PATH",
+        "options": {}
+      },
+      "id": "ea546028-50f5-45d3-9458-6c0d4c674e53",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        -160
+      ],
+      "webhookId": "760fe5cf-1615-411c-a06b-1f4e49df5f3e"
+    },
+    {
+      "id": "a9221cdb-fc6a-487f-a6f6-94879ab649f6",
+      "name": "Memory Index Prep",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1360,
+        128
+      ],
+      "parameters": {
+        "jsCode": "\nconst content = String($input.first().json.newMemoryContent || '');\nconst fileId = String($input.first().json.memoryMdId || '');\n// Encoder en base64 pour ConvertToFile toBinary\nconst b64 = Buffer.from(content, 'utf-8').toString('base64');\nreturn [{ json: { indexContent: content, indexBase64: b64, memFileId: fileId } }];\n"
+      }
+    },
+    {
+      "id": "4b57ab2d-f608-49d7-b80f-491d7cb5daed",
+      "name": "Index to Binary",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        1600,
+        128
+      ],
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "indexBase64",
+        "binaryPropertyName": "data",
+        "options": {
+          "fileName": "MEMORY.md",
+          "mimeType": "text/plain",
+          "dataIsBase64": true
+        }
+      }
+    },
+    {
+      "id": "c6b91915-efa4-494b-a03c-f9aa4dba73f8",
+      "name": "Drive Write Index",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1840,
+        128
+      ],
+      "parameters": {
+        "resource": "file",
+        "operation": "update",
+        "fileId": {
+          "__rl": true,
+          "value": "YOUR_MEMORY_MD_FILE_ID",
+          "mode": "id"
+        },
+        "changeFileContent": true,
+        "inputDataFieldName": "data",
+        "options": {}
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "YOUR_GOOGLE_DRIVE_CREDENTIAL_ID",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "id": "5eb30080-8976-4c2a-8dfb-19481a4bb1af",
+      "name": "Sticky Note User",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        900,
+        -656
+      ],
+      "parameters": {
+        "content": "## Ce que fait Autodream — pour toi\n\nChaque nuit a 01h00 UTC, Autodream:\n\n1. Lit tous tes fichiers memoire Claude (Drive)\n2. Demande a Claude de consolider chaque fichier\n   (supprimer les doublons, reformuler plus clair)\n3. Ecrit les fichiers mis a jour sur Drive\n4. Reconstruit MEMORY.md (l'index de toutes les memoires)\n5. T'envoie un email de resume\n\nAu prochain demarrage de Claude Code,\nle hook SessionStart sync automatiquement\nDrive -> Local.\n\nResultat : Claude se souvient mieux de toi\nau fil du temps, sans intervention manuelle.",
+        "height": 360,
+        "width": 480,
+        "color": 4
+      }
     }
   ],
   "connections": {
     "Schedule Trigger": {
-      "main": [[{"node": "List Memory Files", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "List Memory Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "When clicking 'Execute workflow'": {
-      "main": [[{"node": "List Memory Files", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "List Memory Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "List Memory Files": {
-      "main": [[{"node": "Prepare Files", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Prepare Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Prepare Files": {
-      "main": [[{"node": "Process One File", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Process One File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Process One File": {
-      "main": [[{"node": "Build Email", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Read All Files for Index",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Build Email": {
-      "main": [[{"node": "Send Summary Email", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Send Summary Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Error Trigger": {
-      "main": [[{"node": "Send Error Email", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Send Error Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read All Files for Index": {
+      "main": [
+        [
+          {
+            "node": "Build MEMORY Index",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build MEMORY Index": {
+      "main": [
+        [
+          {
+            "node": "Call Claude for Index",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Claude for Index": {
+      "main": [
+        [
+          {
+            "node": "Parse Index",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Index": {
+      "main": [
+        [
+          {
+            "node": "Memory Index Prep",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "List Memory Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memory Index Prep": {
+      "main": [
+        [
+          {
+            "node": "Index to Binary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Index to Binary": {
+      "main": [
+        [
+          {
+            "node": "Drive Write Index",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Drive Write Index": {
+      "main": [
+        [
+          {
+            "node": "Build Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "oksf4mbuurLbDqsN",
+    "executionTimeout": 1800
   }
 }

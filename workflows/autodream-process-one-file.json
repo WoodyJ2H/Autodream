@@ -2,62 +2,14 @@
   "name": "Autodream - Process One File",
   "nodes": [
     {
-      "parameters": {
-        "content": "## 📄 AUTODREAM — Process One File\n\n**Sub-workflow** called by *Autodream - Memory Consolidation*\nfor each memory file.\n\nReceives: `fileId` + `fileName`\nReturns: `fileName`, `changed`, `changes`, `observation`\n\n⚠️ This workflow must be **active** to work.",
-        "height": 300,
-        "width": 480,
-        "color": 3
-      },
-      "id": "sticky-title",
-      "name": "Sticky Note Title",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -208,
-        -320
-      ]
-    },
-    {
-      "parameters": {
-        "content": "## ⚙️ CONFIGURATION\n\n**Read File & Write File:**\n→ Select your **Google Drive OAuth2** credential\n\n**Call Claude:**\n→ Select your **Anthropic API** credential\n→ Header `anthropic-version: 2023-06-01` is required\n\n**Default model:** `claude-sonnet-4-6`\nChange it in the JSON Body of the Call Claude node.",
-        "height": 240,
-        "width": 480,
-        "color": 5
-      },
-      "id": "sticky-setup",
-      "name": "Sticky Note Setup",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -208,
-        32
-      ]
-    },
-    {
       "parameters": {},
       "id": "sub-trigger",
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
       "position": [
-        368,
+        0,
         0
-      ]
-    },
-    {
-      "parameters": {
-        "content": "## 📅 Read file from Drive\nFetches the raw content\nof the `.md` memory file",
-        "height": 180,
-        "width": 220,
-        "color": 4
-      },
-      "id": "sticky-read",
-      "name": "Sticky Note Read",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        560,
-        -208
       ]
     },
     {
@@ -78,24 +30,28 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        608,
+        224,
         0
-      ]
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "YOUR_GOOGLE_DRIVE_CREDENTIAL_ID",
+          "name": "Google Drive account"
+        }
+      }
     },
     {
-      "parameters": {
-        "content": "## 🧠 Call Claude\nSends the file content to Claude\nfor consolidation.\n\nRequires Anthropic credential\nand `anthropic-version` header.",
-        "height": 200,
-        "color": 2
-      },
-      "id": "sticky-claude",
-      "name": "Sticky Note Claude",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
+      "id": "extract-content",
+      "name": "Extract Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
-        832,
-        -208
-      ]
+        336,
+        0
+      ],
+      "parameters": {
+        "jsCode": "\nconst item = $input.first();\nconst trigger = $('Execute Workflow Trigger').item.json;\nconst fileName = trigger.fileName;\nconst fileId = trigger.fileId;\n\nlet content = '';\nif (item.json && item.json.data) {\n  content = item.json.data;\n} else if (item.json && item.json.body) {\n  content = item.json.body;\n}\n\nconst sys = [\n  'You are a memory consolidation system for Claude Code.',\n  'You receive ONE memory file.',\n  '',\n  'Your tasks:',\n  '1. Consolidate redundant information',\n  '2. Remove outdated or contradictory entries',\n  '3. Improve clarity and precision',\n  '4. Preserve the existing YAML frontmatter format',\n  '',\n  'STRICT rules: Raw JSON ONLY, ZERO backticks. Start with {.',\n  '',\n  'If changed=true: {\"changed\":true,\"content\":\"...\",\"changes\":\"...\",\"observation\":\"...\"}',\n  'If changed=false: {\"changed\":false,\"changes\":\"No changes\",\"observation\":\"...\"}'\n].join('\\n');\n\nconst claudeBody = JSON.stringify({\n  model: 'claude-sonnet-4-6',\n  max_tokens: 4096,\n  system: sys,\n  messages: [{\n    role: 'user',\n    content: 'Run: ' + new Date().toISOString() + '\\nFile: ' + fileName + '\\n\\nContent:\\n' + content.slice(0, 3000)\n  }]\n});\n\nreturn [{ json: { fileName, fileId, fileContent: content, claudeBody } }];\n"
+      }
     },
     {
       "parameters": {
@@ -113,8 +69,9 @@
           ]
         },
         "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-6\",\n  \"max_tokens\": 4096,\n  \"system\": \"You are a memory consolidation system for Claude Code.\\nYou receive ONE memory file.\\n\\nYour tasks:\\n1. Consolidate redundant information\\n2. Remove outdated or contradictory entries\\n3. Improve clarity and precision\\n4. Preserve the existing YAML frontmatter format\\n\\nSTRICT format rules:\\n- Raw JSON ONLY, ZERO backticks, ZERO markdown\\n- Start directly with {\\n\\nIf changed=true:\\n{\\n  \\\"changed\\\": true,\\n  \\\"content\\\": \\\"full file content after changes\\\",\\n  \\\"changes\\\": \\\"- What changed\\\",\\n  \\\"observation\\\": \\\"Brief comment\\\"\\n}\\n\\nIf changed=false:\\n{\\n  \\\"changed\\\": false,\\n  \\\"changes\\\": \\\"No changes\\\",\\n  \\\"observation\\\": \\\"Brief comment\\\"\\n}\",\n  \"messages\": [{\"role\": \"user\", \"content\": {{ JSON.stringify(\"Run: \" + $now.toISO() + \"\\nFile: \" + $input.first().json.fileName + \"\\n\\nContent:\\n\" + $json.data.slice(0, 3000)) }}}]\n}",
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.claudeBody }}",
         "options": {}
       },
       "id": "call-claude",
@@ -122,20 +79,26 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        864,
+        560,
         0
-      ]
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "YOUR_ANTHROPIC_CREDENTIAL_ID",
+          "name": "Anthropic account"
+        }
+      }
     },
     {
       "parameters": {
-        "jsCode": "const fileName = $('Execute Workflow Trigger').first().json.fileName;\nconst fileId = $('Execute Workflow Trigger').first().json.fileId;\nconst raw = $input.first().json.content[0].text;\nconst cleaned = raw.replace(/^```json\\s*/i, '').replace(/^```\\s*/i, '').replace(/```\\s*$/i, '').trim();\n\nlet parsed;\ntry {\n  parsed = JSON.parse(cleaned);\n} catch(e) {\n  return [{ json: { fileName, changed: false, changes: 'Parsing error', observation: e.message, writeNeeded: false } }];\n}\n\nreturn [{ json: {\n  fileName,\n  fileId,\n  changed: parsed.changed === true,\n  changes: parsed.changes || 'No changes',\n  observation: parsed.observation || '',\n  newContent: parsed.content || '',\n  writeNeeded: parsed.changed === true && !!parsed.content\n} }];"
+        "jsCode": "const fileName = $('Execute Workflow Trigger').item.json.fileName;\nconst fileId = $('Execute Workflow Trigger').item.json.fileId;\nconst raw = $input.first().json.content[0].text;\nconst cleaned = raw.replace(/^```json\\s*/i, '').replace(/^```\\s*/i, '').replace(/```\\s*$/i, '').trim();\n\nlet parsed;\ntry {\n  parsed = JSON.parse(cleaned);\n} catch(e) {\n  return [{ json: { fileName, changed: false, changes: 'Erreur parsing', observation: e.message } }];\n}\n\nreturn [{ json: {\n  fileName,\n  fileId,\n  changed: parsed.changed === true,\n  changes: parsed.changes || 'Aucune modification',\n  observation: parsed.observation || '',\n  newContent: parsed.content || '',\n  writeNeeded: parsed.changed === true && !!parsed.content\n} }];"
       },
-      "id": "parse-response",
-      "name": "Parse Response",
+      "id": "parse-and-write",
+      "name": "Parse and Write",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1104,
+        672,
         0
       ]
     },
@@ -143,10 +106,10 @@
       "parameters": {
         "conditions": {
           "options": {
-            "caseSensitive": true,
+            "version": 2,
             "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
+            "caseSensitive": true,
+            "typeValidation": "strict"
           },
           "conditions": [
             {
@@ -168,7 +131,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1328,
+        880,
         0
       ]
     },
@@ -192,14 +155,20 @@
         "options": {},
         "body": "={{ $json.newContent }}"
       },
-      "id": "write-file",
+      "id": "a4ee774a-3f24-4fce-a143-25960f6fa097",
       "name": "Write File",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1552,
+        1104,
         -80
-      ]
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "YOUR_GOOGLE_DRIVE_CREDENTIAL_ID",
+          "name": "Google Drive account"
+        }
+      }
     },
     {
       "parameters": {
@@ -208,25 +177,25 @@
             {
               "id": "r1",
               "name": "fileName",
-              "value": "={{ $('Parse Response').item.json.fileName }}",
+              "value": "={{ $('Parse and Write').item.json.fileName }}",
               "type": "string"
             },
             {
               "id": "r2",
               "name": "changed",
-              "value": "={{ $('Parse Response').item.json.changed }}",
+              "value": "={{ $('Parse and Write').item.json.changed }}",
               "type": "boolean"
             },
             {
               "id": "r3",
               "name": "changes",
-              "value": "={{ $('Parse Response').item.json.changes }}",
+              "value": "={{ $('Parse and Write').item.json.changes }}",
               "type": "string"
             },
             {
               "id": "r4",
               "name": "observation",
-              "value": "={{ $('Parse Response').item.json.observation }}",
+              "value": "={{ $('Parse and Write').item.json.observation }}",
               "type": "string"
             }
           ]
@@ -238,7 +207,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        1760,
+        1328,
         -80
       ]
     },
@@ -279,9 +248,25 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        1552,
+        1104,
         80
       ]
+    },
+    {
+      "id": "sticky-main-autodream-process",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -400,
+        -240
+      ],
+      "parameters": {
+        "content": "## Autodream — Process One File\n\n**Rôle :** Sous-workflow — traite un seul fichier mémoire Drive via Claude.\n\n**Déclencheur :** Appelé par Autodream - Memory Consolidation via Execute Workflow\n\n**Inputs :** fileId · fileName (passés par le parent)\n\n**Outputs :** { status: 'written' | 'unchanged', fileName }\n\n**Ce qu'il fait :**\n1. Lit le contenu du fichier depuis Drive\n2. Envoie le contenu à Claude pour consolidation/résumé\n3. Compare la réponse avec l'original\n4. Si modifié → écrit le fichier mis à jour dans Drive\n5. Retourne le statut au workflow parent\n\n**Dépendances :**\n→ Appelé par : Autodream - Memory Consolidation (gootAOELYKn0NW7k)\n→ Utilise : Google Drive API · Claude API (HTTP Request direct)",
+        "height": 360,
+        "width": 600,
+        "color": 6
+      }
     }
   ],
   "connections": {
@@ -300,7 +285,7 @@
       "main": [
         [
           {
-            "node": "Call Claude",
+            "node": "Extract Content",
             "type": "main",
             "index": 0
           }
@@ -311,14 +296,14 @@
       "main": [
         [
           {
-            "node": "Parse Response",
+            "node": "Parse and Write",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Parse Response": {
+    "Parse and Write": {
       "main": [
         [
           {
@@ -357,9 +342,23 @@
           }
         ]
       ]
+    },
+    "Extract Content": {
+      "main": [
+        [
+          {
+            "node": "Call Claude",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "oksf4mbuurLbDqsN",
+    "executionTimeout": 600
   }
 }
