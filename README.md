@@ -1,10 +1,16 @@
-# Autodream — Memory Consolidation for Claude Code
+# Autodream — Memory & Context tools for Claude Code
 
-> AI-powered nightly consolidation of your Claude Code memory files via n8n + Google Drive + Claude API
+> Two open-source tools to make Claude Code sessions survive over time:
+> - **Autodream** — nightly memory consolidation via n8n + Google Drive + Claude API
+> - **Transfer Session** — clean handoff between sessions via a magic keyword (`TRANSFER`)
+
+Both solve the same underlying problem: **how does an AI agent keep its context across time?**
 
 ---
 
-## What it does
+## 1. Autodream — Nightly memory consolidation
+
+### What it does
 
 Every night at 3am, Autodream:
 1. Lists all `.md` memory files in your Google Drive "Claude Memory" folder
@@ -113,6 +119,36 @@ Default: `0 0 3 * * *` (3am daily). Modify the Schedule Trigger node to change t
 ## Error handling
 
 Both workflows have an Error Trigger node that sends an email alert on failure. Configure the `errorWorkflow` setting in n8n to point to a dedicated error handler if needed.
+
+---
+
+---
+
+## 2. Transfer Session — Clean handoff between sessions
+
+### The problem
+
+A Claude Code session eventually accumulates too much context: explored errors, dead-ends, abandoned attempts. The conversation slows down, the agent loses focus, and you can't realistically "downgrade" the model (Opus → Sonnet → Haiku) to save cost because the new model would start cold.
+
+### The solution
+
+A magic keyword — `TRANSFER` — that generates a structured markdown brief. The brief contains exactly what the next session needs:
+
+- Objective (what to do, why)
+- Project context (files, workflows, URLs)
+- Current state (what's done, what remains)
+- Locked decisions (don't re-discuss these)
+- Known pitfalls (don't fall back into these)
+- Memory files to load
+- First concrete action
+
+A `SessionStart` hook can optionally detect a recent brief when a new session opens and offer to resume.
+
+### Setup
+
+The skill lives in [`skills/transfer-session/`](./skills/transfer-session/). It works as a standard Claude Code skill — Claude triggers it automatically when the user types `TRANSFER`, `BRIEF`, or `HANDOFF`.
+
+To enable the auto-detection hook at session start, see [`skills/transfer-session/hook/README.md`](./skills/transfer-session/hook/README.md).
 
 ---
 
