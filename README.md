@@ -1,16 +1,14 @@
-# Autodream — Memory & Context tools for Claude Code
+# Autodream — Nightly memory consolidation for Claude Code
 
-> Two open-source tools to make Claude Code sessions survive over time:
-> - **Autodream** — nightly memory consolidation via n8n + Google Drive + Claude API
-> - **Transfer Session** — clean handoff between sessions via a magic keyword (`TRANSFER`)
+> Open-source n8n workflow that makes Claude Code memory survive over time.
+> Every night, Autodream reviews your memory files, consolidates them via Claude Sonnet, and writes them back to Google Drive — so each new session starts with cleaner, deduplicated context.
 
-Both solve the same underlying problem: **how does an AI agent keep its context across time?**
+> **Looking for clean handoffs between sessions?** Check out the companion project
+> [**claude-session-transfer**](https://github.com/WoodyJ2H/claude-session-transfer) — a magic-keyword (`TRANSFER`) skill that generates a self-contained markdown brief so a new session resumes instantly without re-explanation.
 
 ---
 
-## 1. Autodream — Nightly memory consolidation
-
-### What it does
+## What it does
 
 Every night at 3am, Autodream:
 1. Lists all `.md` memory files in your Google Drive "Claude Memory" folder
@@ -122,33 +120,9 @@ Both workflows have an Error Trigger node that sends an email alert on failure. 
 
 ---
 
----
+## Related
 
-## 2. Transfer Session — Clean handoff between sessions
-
-### The problem
-
-A Claude Code session eventually accumulates too much context: explored errors, dead-ends, abandoned attempts. The conversation slows down, the agent loses focus, and you can't realistically "downgrade" the model (Opus → Sonnet → Haiku) to save cost because the new model would start cold.
-
-### The solution
-
-A magic keyword — `TRANSFER` — that generates a structured markdown brief. The brief contains exactly what the next session needs:
-
-- Objective (what to do, why)
-- Project context (files, workflows, URLs)
-- Current state (what's done, what remains)
-- Locked decisions (don't re-discuss these)
-- Known pitfalls (don't fall back into these)
-- Memory files to load
-- First concrete action
-
-A `SessionStart` hook can optionally detect a recent brief when a new session opens and offer to resume.
-
-### Setup
-
-The skill lives in [`skills/transfer-session/`](./skills/transfer-session/). It works as a standard Claude Code skill — Claude triggers it automatically when the user types `TRANSFER`, `BRIEF`, or `HANDOFF`.
-
-To enable the auto-detection hook at session start, see [`skills/transfer-session/hook/README.md`](./skills/transfer-session/hook/README.md).
+- [**claude-session-transfer**](https://github.com/WoodyJ2H/claude-session-transfer) — Persistent session handoff via magic keyword `TRANSFER`. Saves a self-contained markdown brief so a new Claude Code session resumes instantly with full context.
 
 ---
 
