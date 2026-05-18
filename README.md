@@ -10,6 +10,8 @@
 > **Looking for clean handoffs between sessions?** Check out the companion project
 > [**claude-session-transfer**](https://github.com/WoodyJ2H/claude-session-transfer) — a magic-keyword (`TRANSFER`) skill that generates a self-contained markdown brief so a new session resumes instantly without re-explanation.
 
+![Autodream workflow](workflow-screenshot-clean.png)
+
 ---
 
 ## What it does
