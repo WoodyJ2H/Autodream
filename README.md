@@ -1,6 +1,8 @@
 # Autodream — Memory & Context tools for Claude Code
 
-> Two open-source tools to make Claude Code sessions survive over time:
+[![GitHub stars](https://img.shields.io/github/stars/WoodyJ2H/Autodream?style=social)](https://github.com/WoodyJ2H/Autodream/stargazers)
+
+> If this saves you time, a ⭐ star helps others find it. Two open-source tools to make Claude Code sessions survive over time:
 > - **Autodream** — nightly memory consolidation via n8n + Google Drive + Claude API
 > - **Transfer Session** — clean handoff between sessions via a magic keyword (`TRANSFER`)
 
